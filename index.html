@@ -317,6 +317,7 @@ mark.kw{background:rgba(255,87,34,.2);color:var(--or);border-radius:3px;padding:
 .ai-send:hover{transform:scale(1.1)}
 
 
+
 /* ===== LOADING SCREEN ===== */
 #view-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
 #view-landing{display:none}
@@ -462,6 +463,21 @@ button{font-family:'Inter',sans-serif;cursor:pointer;border:none}
 .streak-day.active{background:var(--or);opacity:.85}
 .streak-day.today{background:var(--or);box-shadow:0 0 8px rgba(255,87,34,.5)}
 
+.distraction-alert{
+  animation: flashRed 0.6s ease-in-out 6;
+}
+
+@keyframes flashRed{
+  0%{ background:#000; }
+  50%{ background:#330000; }
+  100%{ background:#000; }
+}
+.toast{
+position:fixed;
+bottom:88px;
+left:50%;
+transform:translateX(-50%);
+}
 </style>
 </head>
 <body>
@@ -657,7 +673,29 @@ button{font-family:'Inter',sans-serif;cursor:pointer;border:none}
   <div class="ls-logo">NA</div>
   <div class="ls-txt">Loading your learning space…</div>
 </div>
+<!-- ─── VOICE WIDGET ─── -->
+<div id="voice-widget" style="
+position:fixed;
+bottom:100px;
+right:26px;
+z-index:8400;
+">
 
+<button onclick="toggleVoice()" id="voice-btn" style="
+width:56px;
+height:56px;
+border-radius:50%;
+background:#ff5722;
+color:white;
+font-size:22px;
+border:none;
+box-shadow:0 8px 24px rgba(0,0,0,.4);
+cursor:pointer;
+">
+🎤
+</button>
+
+</div>
 <!-- ══ TOPBAR ══ -->
 <div class="topbar" id="topbar">
   <div class="tb-brand">NeuroAdapt</div>
@@ -1101,7 +1139,8 @@ NeuroAdapt will break it into brain-friendly chunks with highlighted keywords an
 
 <!-- ─── FOCUS RULER ─── -->
 <div class="ruler" id="ruler"><div class="ruler-line"></div></div>
-
+<!-- Hidden camera for focus tracking -->
+<video id="focusCam" autoplay playsinline style="display:none;"></video>
 <!-- ─── NUDGE BANNER ─── -->
 <div class="nudge" id="nudge">
   <button class="nudge-x" onclick="dismissNudge()">✕</button>
@@ -1162,7 +1201,183 @@ function showView(name) {
   document.getElementById('view-landing').style.display   = name === 'landing'   ? 'block' : 'none';
   document.getElementById('view-dashboard').style.display = name === 'dashboard' ? 'block' : 'none';
 }
+ //////////////////////////////////////////////////////
+// VOICE CONTROL SYSTEM
+//////////////////////////////////////////////////////
 
+let recognition;
+let voiceEnabled = false;
+
+function toggleVoice() {
+
+  if(!voiceEnabled){
+    startVoiceControl();
+    voiceEnabled = true;
+    showToast("🎤 Voice control ON");
+  }else{
+    stopVoiceControl();
+    voiceEnabled = false;
+    showToast("🎤 Voice control OFF");
+  }
+
+}
+
+function startVoiceControl(){
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if(!SpeechRecognition){
+    showToast("Voice recognition not supported");
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.lang = "en-US";
+
+  recognition.onresult = function(event){
+
+    const command =
+      event.results[event.results.length-1][0].transcript
+      .toLowerCase()
+      .trim();
+
+    console.log("Voice command:", command);
+
+    processVoiceCommand(command);
+  };
+
+  recognition.start();
+}
+
+function stopVoiceControl(){
+  if(recognition){
+    recognition.stop();
+  }
+}
+
+function processVoiceCommand(cmd){
+
+  ////////////////////////////////////
+  // PAGE NAVIGATION
+  ////////////////////////////////////
+
+  if(cmd.includes("open overview")){
+    goPage('overview', document.querySelector('[data-pg=overview]'));
+  }
+
+  else if(cmd.includes("open text")){
+    goPage('text', document.querySelector('[data-pg=text]'));
+  }
+
+  else if(cmd.includes("open Profiles")){
+    goPage('profiles', document.querySelector('[data-pg=profiles]'));
+  }
+
+  else if(cmd.includes("open focus")){
+    goPage('focus', document.querySelector('[data-pg=focus]'));
+  }
+  // TIMER CONTROL
+  else if(cmd.includes("start timer")){
+    startTimer();
+    showToast("Timer started");
+  }
+
+  else if(cmd.includes("stop timer") || cmd.includes("pause timer")){
+    pauseTimer();
+    showToast("Timer paused");
+  }
+
+  else if(cmd.includes("open wellness")){
+    goPage('wellness', document.querySelector('[data-pg=wellness]'));
+  }
+
+ // ACCESSIBILITY VOICE COMMANDS
+
+if(cmd.includes("on Dyslexia Font")){
+  applyTog('motion', true);
+  showToast("Dyslexia Font ON");
+}
+
+else if(cmd.includes("off Dyslexia Font")){
+  applyTog('motion', false);
+  showToast("Dyslexia Font OFF");
+}
+
+else if(cmd.includes("on Wide Spacing")){
+  applyTog('font', true);
+  showToast("Wide Spacing ON");
+}
+
+else if(cmd.includes("off Wide Spacing")){
+  applyTog('font', false);
+  showToast("Wide Spacing OFF");
+}
+
+else if(cmd.includes("on Reduce Motion") || cmd.includes("wide spacing")){
+  applyTog('spacing', true);
+  showToast("Reduce Motion ON");
+}
+
+else if(cmd.includes("off Reduce Motion")){
+  applyTog('spacing', false);
+  showToast("Reduce Motion OFF");
+}
+
+else if(cmd.includes("on focus ruler")){
+  applyTog('ruler', true);
+  showToast("Focus ruler ON");
+}
+
+else if(cmd.includes("off focus ruler")){
+  applyTog('ruler', false);
+  showToast("Focus ruler OFF");
+}
+
+else if(cmd.includes("on text to speech") || cmd.includes("enable tts")){
+  applyTog('tts', true);
+  showToast("Text to speech ON");
+}
+
+else if(cmd.includes("off text to speech") || cmd.includes("disable tts")){
+  applyTog('tts', false);
+  showToast("Text to speech OFF");
+}
+
+  ////////////////////////////////////
+  // TEXT SIMPLIFICATION
+  ////////////////////////////////////
+
+  else if(cmd.includes("simplify text")){
+    runSimplify();
+  }
+
+  else if(cmd.includes("read text")){
+    speakAll();
+  }
+
+  else if(cmd.includes("stop reading")){
+    stopSpeak();
+  }
+
+  ////////////////////////////////////
+  // TIMER CONTROL
+  ////////////////////////////////////
+
+  else if(cmd.includes("start timer")){
+    startTimer();
+  }
+
+  else if(cmd.includes("pause timer")){
+    pauseTimer();
+  }
+
+  else if(cmd.includes("reset timer")){
+    resetTimer();
+  }
+
+}
 // ─── FIREBASE ────────────────────────────────────────────────────
 firebase.initializeApp({
   apiKey:"AIzaSyBQhvqnZEbBBYGRJeqvrMVJK_pmwCZrEYU",
@@ -1943,6 +2158,7 @@ function onSettingsChange() {
 }
 function toggleTimer() { timerOn ? pauseTimer() : startTimer(); }
 function startTimer() {
+  startFocusTracking();
   timerOn = true;
   document.getElementById('t-play').textContent = '⏸';
   document.getElementById('t-status').textContent = timerBreak ? '🌿 Break time!' : '🎯 Stay focused!';
@@ -1974,11 +2190,13 @@ function startTimer() {
   }, 1000);
 }
 function pauseTimer() {
+  stopFocusTracking();
   timerOn = false; clearInterval(timerInterval);
   document.getElementById('t-play').textContent = '▶';
   document.getElementById('t-status').textContent = 'Paused — click play to continue.';
 }
 function resetTimer() {
+  stopFocusTracking();
   pauseTimer(); timerBreak = false;
   timerTotal = (parseInt(document.getElementById('ts-work').value)||25)*60;
   timerLeft  = timerTotal;
@@ -2212,7 +2430,159 @@ async function saveParentEmail() {
     showToast('✅ Parent email saved!');
   } catch(e) { showToast('⚠️ Save failed: ' + e.message); }
 }
+async function startFocusCamera(){
+
+  const video = document.getElementById("focusCam");
+
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:true});
+    video.srcObject = stream;
+    await new Promise(resolve => {
+       video.onloadedmetadata = resolve;
+    });
+
+    detectFocus(video);
+
+  }catch(err){
+    console.log("Camera access denied");
+  }
+
+}
+    async function detectFocus(video){
+
+  await faceapi.nets.tinyFaceDetector.loadFromUri(
+"https://cdn.jsdelivr.net/npm/face-api.js/models"
+);
+
+  setInterval(async ()=>{
+
+    const detection =
+      await faceapi.detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      );
+
+    if(!detection){
+
+      showDistractionWarning();
+
+    }
+
+  },3000);
+
+}
+    function showDistractionWarning(){
+
+  showToast("⚠️ You seem distracted. Try focusing!");
+
+  document.body.classList.add("distraction-alert");
+
+  setTimeout(()=>{
+    document.body.classList.remove("distraction-alert");
+  },2000);
+
+}
+        //////////////////////////////////////////////////////
+// AI DISTRACTION DETECTION (FOCUS MODE)
+//////////////////////////////////////////////////////
+
+let focusCamera = null;
+let distractedSeconds = 0;
+
+function startFocusTracking(){
+
+  const video = document.getElementById("focusCam");
+
+  navigator.mediaDevices.getUserMedia({ video:true })
+  .then(stream=>{
+
+    video.srcObject = stream;
+
+    const faceMesh = new FaceMesh({
+      locateFile: file =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces:1,
+      refineLandmarks:true,
+      minDetectionConfidence:0.5,
+      minTrackingConfidence:0.5
+    });
+
+    faceMesh.onResults(results=>{
+
+  if(!timerOn) return;
+
+  if(!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0){
+
+      distractedSeconds++;
+
+      if(distractedSeconds > 5){
+
+         showToast("⚠ Distraction detected. Look at screen.");
+
+         playWarningSound();
+
+         document.body.classList.add("distraction-alert");
+
+         setTimeout(()=>{
+           document.body.classList.remove("distraction-alert");
+         },3000);
+
+      }
+
+  }else{
+
+      distractedSeconds = 0;
+
+  }
+
+});
+
+
+    focusCamera = new Camera(video,{
+      onFrame: async ()=>{
+        await faceMesh.send({image:video});
+      },
+      width:320,
+      height:240
+    });
+
+    focusCamera.start();
+
+  });
+
+}
+
+function stopFocusTracking(){
+
+  const video = document.getElementById("focusCam");
+
+  if(video.srcObject){
+
+    video.srcObject.getTracks().forEach(track=>{
+      track.stop();
+    });
+
+  }
+
+}
+function playWarningSound(){
+
+  const audio = new Audio(
+    "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+  );
+
+  audio.volume = 0.7;
+  audio.play();
+
+}
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+
 </body>
 </html>
