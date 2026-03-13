@@ -1,0 +1,14 @@
+{
+  "name": "neuroadapt-backend",
+  "version": "1.0.0",
+  "description": "NeuroAdapt parent progress report backend — free Vercel deployment",
+  "main": "api/send-report.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "firebase-admin": "^11.11.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
