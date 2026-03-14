@@ -2645,6 +2645,28 @@ async function openPDF(){
   fileReader.readAsArrayBuffer(file);
 
 }
+function setTint(color, el){
+
+  // Apply the overlay color
+  document.documentElement.style.setProperty('--tint', color);
+
+  // Update selected UI
+  document.querySelectorAll('.ov-pill').forEach(p=>{
+    p.classList.remove('sel');
+  });
+
+  el.classList.add('sel');
+
+  // Save selection if user logged in
+  if(CU){
+    try{
+      db.collection('users').doc(CU.uid).update({
+        screenTint: color
+      });
+    }catch(e){}
+  }
+
+}
 
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
