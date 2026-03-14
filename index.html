@@ -858,6 +858,25 @@ NeuroAdapt will break it into brain-friendly chunks with highlighted keywords an
         </div>
       </div>
     </div>
+      <div style="margin-bottom:12px">
+
+<input type="file" id="pdfUpload" accept="application/pdf">
+
+<button class="btn btn-or" onclick="openPDF()">
+📄 Open PDF
+</button>
+
+</div>
+
+      <div id="pdfContainer" style="
+      width:100%;
+      height:600px;
+      overflow:auto;
+      border:1px solid #333;
+      border-radius:10px;
+      padding:10px;
+      background:#111;"></div>
+
   </div>
 
   <!-- ─── MODULE B: ADAPTIVE PROFILES ─── -->
@@ -1271,7 +1290,7 @@ function processVoiceCommand(cmd){
     goPage('text', document.querySelector('[data-pg=text]'));
   }
 
-  else if(cmd.includes("open Profiles")){
+  else if(cmd.includes("open profiles")){
     goPage('profiles', document.querySelector('[data-pg=profiles]'));
   }
 
@@ -2578,8 +2597,57 @@ function playWarningSound(){
   audio.play();
 
 }
+async function openPDF(){
+
+  const file = document.getElementById("pdfUpload").files[0];
+
+  if(!file){
+    showToast("Please select a PDF");
+    return;
+  }
+
+  const fileReader = new FileReader();
+
+  fileReader.onload = async function(){
+
+    const typedarray = new Uint8Array(this.result);
+
+    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+
+    const container = document.getElementById("pdfContainer");
+
+    container.innerHTML = "";
+
+    for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+
+      const page = await pdf.getPage(pageNum);
+
+      const viewport = page.getViewport({scale:1.4});
+
+      const canvas = document.createElement("canvas");
+
+      const context = canvas.getContext("2d");
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      container.appendChild(canvas);
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise;
+
+    }
+
+  };
+
+  fileReader.readAsArrayBuffer(file);
+
+}
 
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
